@@ -11,11 +11,11 @@
 
 | Member Name | Registration / Roll No. | Assigned Core Modules |
 | :--- | :--- | :--- |
-| **Haseeb Khan** | `BCS-F24-E33` | **1. Boot-Time Profiler** and **6. Process Information Monitor** |
-| **Ibraheem Zain** | `BCS-F24-E02` | **2. Process Lifecycle Monitor** and **7. CPU Time Monitor** |
-| **Huzaifa Ikram** | `BCS-F24-E18` | **3. Sleep/Wakeup Activity Monitor** and **8. Process Memory Usage Monitor** |
-| **Sajid** | `BCS-F24-E35` | **5. Kernel Tick & Uptime Monitor** and **10. System Call Usage Monitor** |
-| **Abu Bakar** | `BCS-F24-E25` | **4. Page Fault Counter** and **9. Context Switch Monitor** |
+| **Haseeb Khan** | `BCS-F24-E33` |
+| **Ibraheem Zain** | `BCS-F24-E02` |
+| **Huzaifa Ikram** | `BCS-F24-E18` |
+| **Sajid** | `BCS-F24-E35` |
+| **Abu Bakar** | `BCS-F24-E25` |
 
 > The names and roll numbers above were supplied by the group. Each student owns two core modules and their corresponding mini-extensions.
 
