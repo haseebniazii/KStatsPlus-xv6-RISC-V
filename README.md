@@ -9,8 +9,8 @@
 
 ## Group Members
 
-| Member Name | Registration / Roll No. | Assigned Core Modules |
-| :--- | :--- | :--- |
+| Member Name | Registration / Roll No. |
+| :--- | :--- |
 | **Haseeb Khan** | `BCS-F24-E33` |
 | **Ibraheem Zain** | `BCS-F24-E02` |
 | **Huzaifa Ikram** | `BCS-F24-E18` |
