@@ -7,17 +7,16 @@
 > **Target:** RISC-V 64-bit on QEMU  
 > **Current status:** Finalized project design and implementation plan; full integrated project and regression tests **not yet verified**
 
-## Group Members
 
-| Member | Assigned Core Modules | Responsibility |
-| :--- | :--- | :--- |
-| **Haseeb** | **1. Boot-Time Profiler** and **6. Process Information Monitor** | Boot measurements, process listings and PID/state filtering |
-| **Huzi** | **3. Sleep/Wakeup Activity Monitor** and **8. Process Memory Usage Monitor** | Per-process sleep statistics and virtual memory tracking |
-| **Ibraheem** | **2. Process Lifecycle Monitor** and **7. CPU Time Monitor** | Process events and sampled CPU runtime |
-| **Sajid** | **5. Kernel Tick & Uptime Monitor** and **10. System Call Usage Monitor** | Timers, multi-HART counts and syscall statistics |
-| **Baker** | **4. Page Fault Counter** and **9. Context Switch Monitor** | Fault diagnostics and scheduler activity |
+### Group Members
 
-> Roll numbers have not been provided and should be added by the group before submission. Names above follow the spellings supplied by the group.
+| Member Name | Registration / Roll No. |
+| :--- | :--- |
+| **Haseeb Khan** | `BCS-F24-E33` |
+| **Ibraheem Zain** | `BCS-F24-E02` |
+| **Huzaifa Ikram** | `BCS-F24-E18` |
+| **Sajid** | `BCS-F24-E35` |
+| **Abu Bakar** | `BCS-F24-E25` |
 
 ---
 
