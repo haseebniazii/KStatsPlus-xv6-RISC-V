@@ -7,16 +7,17 @@
 > **Target:** RISC-V 64-bit on QEMU  
 > **Current status:** Finalized project design and implementation plan; full integrated project and regression tests **not yet verified**
 
+## Group Members
 
-### Group Members
+| Member Name | Registration / Roll No. | Assigned Core Modules |
+| :--- | :--- | :--- |
+| **Haseeb Khan** | `BCS-F24-E33` | **1. Boot-Time Profiler** and **6. Process Information Monitor** |
+| **Ibraheem Zain** | `BCS-F24-E02` | **2. Process Lifecycle Monitor** and **7. CPU Time Monitor** |
+| **Huzaifa Ikram** | `BCS-F24-E18` | **3. Sleep/Wakeup Activity Monitor** and **8. Process Memory Usage Monitor** |
+| **Sajid** | `BCS-F24-E35` | **5. Kernel Tick & Uptime Monitor** and **10. System Call Usage Monitor** |
+| **Abu Bakar** | `BCS-F24-E25` | **4. Page Fault Counter** and **9. Context Switch Monitor** |
 
-| Member Name | Registration / Roll No. |
-| :--- | :--- |
-| **Haseeb Khan** | `BCS-F24-E33` |
-| **Ibraheem Zain** | `BCS-F24-E02` |
-| **Huzaifa Ikram** | `BCS-F24-E18` |
-| **Sajid** | `BCS-F24-E35` |
-| **Abu Bakar** | `BCS-F24-E25` |
+> The names and roll numbers above were supplied by the group. Each student owns two core modules and their corresponding mini-extensions.
 
 ---
 
@@ -27,6 +28,8 @@
 The project retains the original five **KStats** monitoring areas and expands the system to **ten core modules**. Each core module has a **specific mini-extension** that adds meaningful functionality beyond the basic counter or display.
 
 **Scope:** 10 core monitoring modules + 10 targeted mini-extensions, integrated into **one** xv6 repository for one five-member OS group.
+
+**Documentation status:** This README is a **detailed design and implementation specification**, not proof that all modules are running. Example output is illustrative; real results will be recorded after QEMU verification. The group must record the exact `git rev-parse HEAD` commit of the xv6 baseline before modifying it.
 
 **Educational goals:**
 
@@ -63,51 +66,33 @@ KStats+ uses a read-only diagnostics interface: kernel hooks update statistics; 
 
 ```mermaid
 flowchart TB
-    subgraph U["Layer 1 — User-Space Diagnostics"]
-      K["kstats — System Statistics"]
-      P["psx — Process Table"]
-      L["klog — Lifecycle Events"]
-      T["kstest — Demonstration Workloads"]
+    subgraph L1["Layer 1 — User-Space Programs"]
+        VIEW["kstats / psx / klog — Read Monitoring Results"]
+        TEST["kstest — Generate Test Workloads"]
     end
 
-    subgraph I["Layer 2 — System Call Interface"]
-      API["KStats Snapshot / Process Snapshot / Event Snapshot / Syscall Details"]
-      SYS["syscall.c + sysproc.c — Safe Copy to User Space"]
-      API --> SYS
+    subgraph L2["Layer 2 — System-Call Boundary"]
+        SNAP["Snapshot Syscalls — Validate Arguments and copyout"]
+        DISPATCH["xv6 System-Call Dispatcher"]
     end
 
-    subgraph C["Layer 3 — xv6 Kernel Instrumentation"]
-      BOOT["Boot Profiler"]
-      PROC["Lifecycle + Process Information"]
-      SLEEP["Sleep / Wakeup + Memory Usage"]
-      FAULT["Page Fault Monitor"]
-      CLOCK["Tick / Uptime + CPU Time"]
-      SCHED["Context Switch Monitor"]
-      CALLS["System Call Usage"]
+    subgraph L3["Layer 3 — xv6 Kernel and KStats+ Hooks"]
+        CORE["xv6 Process / Scheduler / Trap / Memory Events"]
+        HOOK["10 KStats+ Instrumentation Modules"]
+        STATE["Counters / Per-Process Fields / Event Ring"]
+        CORE --> HOOK --> STATE
     end
 
-    subgraph H["Layer 4 — Hardware / Emulator"]
-      Q["QEMU virt — RV64 RISC-V / Multi-HART / Timer / Memory"]
+    subgraph L4["Layer 4 — RISC-V Hardware / QEMU"]
+        HW["Multi-HART CPUs / Timer / Memory / Disk"]
     end
 
-    K --> API
-    P --> API
-    L --> API
-    T --> SYS
-    SYS --> BOOT
-    SYS --> PROC
-    SYS --> SLEEP
-    SYS --> FAULT
-    SYS --> CLOCK
-    SYS --> SCHED
-    SYS --> CALLS
-    BOOT --> Q
-    PROC --> Q
-    SLEEP --> Q
-    FAULT --> Q
-    CLOCK --> Q
-    SCHED --> Q
-    CALLS --> Q
+    HW -->|Hardware interrupts and execution| CORE
+    TEST -->|Triggers fork, sleep, faults, syscalls, etc.| DISPATCH
+    DISPATCH --> CORE
+    VIEW -->|Requests statistics| SNAP
+    SNAP -->|Reads protected snapshots| STATE
+    SNAP -.->|Returns bounded data to user space| VIEW
 ```
 
 ### Monitoring and Report Flow
@@ -147,7 +132,8 @@ flowchart LR
 
 **Core functionality:**
 - Record a boot-start timestamp and the total measured boot interval.
-- Measure important stages: physical allocator (`kinit`), virtual memory (`kvminit` / `kvminithart`), process table (`procinit`), traps/interrupts, and storage initialization.
+- Measure important stages in `kernel/main.c`: physical allocator (`kinit`), virtual memory (`kvminit` / `kvminithart`), process table (`procinit`), traps/interrupts, kernel I/O tables (`binit`, `iinit`, `fileinit`) and VirtIO disk-device initialization (`virtio_disk_init`).
+- **Scope boundary:** `fsinit()` initializes the file system later in `forkret()` on the reviewed official xv6 branch; it is **not** included in the `main.c` disk-device timing unless a separate hook is added.
 - Expose a read-only boot summary through `kstats boot`.
 
 **Mini-Extension — Slowest Stage & Timing Percentage:**
@@ -178,15 +164,15 @@ Allocator         : 500
 Virtual memory    : 1200
 Process table     : 350
 Trap / interrupts : 450
-Storage init      : 1500
-Slowest stage     : Storage init
+VirtIO disk init  : 1500
+Slowest stage     : VirtIO disk init
 Measured stages   : 4000
 Total boot window : 4500
 ```
 
 **Relevant kernel files:** `kernel/main.c`, `kernel/riscv.h`, new `kernel/bootprof.c`, shared statistics header.
 
-**Validation:** Boot xv6 twice, confirm stable nonnegative stage measurements and correct maximum/percentage calculations. Small differences between boots are normal.
+**Validation:** Boot xv6 twice, confirm nonnegative stage measurements, the correct maximum and correct percentages. Small timing differences between boots are normal. Verify the timing unit before reporting milliseconds; distinguish `virtio_disk_init()` from the later `fsinit()` call.
 
 ---
 
@@ -286,7 +272,7 @@ flowchart TD
     C -- No --> X["Other trap handling"]
     C -- Yes --> D["Increment correct fault-class counter"]
     D --> E["Record PID and stval"]
-    E --> F["Call existing vmfault() handler"]
+    E --> F["Continue the existing vmfault() resolution path — exactly once"]
     F --> G{"Fault resolved?"}
     G -- Yes --> H["Resolved counter++; resume"]
     G -- No --> I["Failed counter++; existing error path"]
@@ -294,7 +280,7 @@ flowchart TD
     I --> J
 ```
 
-**Critical boundary:** The initial module covers user load/store faults only. An instruction page fault (`scause = 12`) is not silently included in the total. Fault resolution must preserve xv6's original behavior.
+**Critical boundary:** The initial module covers user load/store faults only. An instruction page fault (`scause = 12`) is not silently included in the total. Fault resolution must preserve xv6's original behavior. Add instrumentation **around the already-existing `vmfault()` call inside `usertrap()`**; never call `vmfault()` a second time just to count the fault.
 
 **Relevant kernel files:** `kernel/trap.c`, `kernel/vm.c`, `kernel/proc.h`, new `kernel/faultmon.c`.
 
@@ -485,7 +471,7 @@ flowchart TD
     C -- No --> D["Count unknown syscall; existing error behavior"]
     C -- Yes --> E["Count global + per-PID request"]
     E --> F["Call existing sys_*() handler"]
-    F --> G["Inspect return status"]
+    F --> G["Inspect handler return status"]
     G --> H["Mini-Extension: frequency / failure accounting"]
     H --> I["kstats calls / psx details"]
 ```
@@ -521,7 +507,7 @@ int ksyscalls(int pid, struct kstats_syscalls *out);
 
 **Important integration details:**
 
-1. Assign syscall numbers only after pinning the baseline; official reviewed `syscall.h` currently ends at `SYS_sync = 22`, but a previously modified KStats checkout may already use number 23.
+1. Assign syscall numbers only after pinning the baseline; the reviewed official `riscv` branch has `SYS_sync = 22` as the last listed system call, but a modified xv6 checkout may already reserve number 23 or additional numbers. **Do not hardcode numbers before checking the chosen commit.**
 2. Update `kernel/syscall.h`, `kernel/syscall.c`, `kernel/sysproc.c`, `user/user.h`, `user/usys.pl` and `Makefile` together.
 3. Use `copyout` with size and buffer-capacity validation; never expose raw kernel pointers or pass kernel locks to user space.
 4. Use bounded snapshots/events: the process table and event ring must not overflow user buffers.
@@ -721,11 +707,11 @@ Every member owns **two core modules, their two mini-extensions, tests and docum
 
 | Member | Core modules | Deliverables |
 | :--- | :--- | :--- |
-| **Haseeb** | 1, 6 | Boot timings, stage ranking, `psx` core/filters, tests |
-| **Huzi** | 3, 8 | Sleep counters/duration, memory current/peak, tests |
-| **Ibraheem** | 2, 7 | Lifecycle counters/events, CPU sampled ticks/%, tests |
-| **Sajid** | 5, 10 | Uptime/per-HART counters, syscall-frequency report, tests |
-| **Baker** | 4, 9 | Fault classification, dispatch/last-HART monitoring, tests |
+| **Haseeb Khan** (`BCS-F24-E33`) | 1, 6 | Boot timings, stage ranking, `psx` core/filters, tests |
+| **Ibraheem Zain** (`BCS-F24-E02`) | 2, 7 | Lifecycle counters/events, CPU sampled ticks/%, tests |
+| **Huzaifa Ikram** (`BCS-F24-E18`) | 3, 8 | Sleep counters/duration, memory current/peak, tests |
+| **Sajid** (`BCS-F24-E35`) | 5, 10 | Uptime/per-HART counters, syscall-frequency report, tests |
+| **Abu Bakar** (`BCS-F24-E25`) | 4, 9 | Fault classification, dispatch/last-HART monitoring, tests |
 
 ### Safe Git Workflow
 
@@ -749,6 +735,8 @@ Every member owns **two core modules, their two mini-extensions, tests and docum
 - **System-call failures:** Negative return values are treated as failures only where that syscall's interface defines them as errors.
 - **Kernel stability:** Existing xv6 behavior should remain unchanged; hooks should only observe and report statistics.
 - **Version compatibility:** The reviewed official xv6 source uses specific `proc.c`, `trap.c` and `vmfault()` interfaces. Pin and inspect the actual checkout before integrating earlier KStats code.
+- **Boot stages:** `virtio_disk_init()` is a device-initialization stage in `main.c`, whereas `fsinit()` is performed later; the example does not claim to time every file-system initialization activity.
+- **Diagram arrows:** Hardware and workloads trigger kernel activity; hooks update statistics; user commands query read-only snapshots through system calls. The instrumentation does **not** control the emulator hardware.
 
 ---
 
