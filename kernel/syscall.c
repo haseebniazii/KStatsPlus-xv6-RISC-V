@@ -102,6 +102,10 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+extern uint64 sys_kstats(void);
+extern uint64 sys_kprocs(void);
+extern uint64 sys_kevents(void);
+extern uint64 sys_ksyscalls(void);
 extern uint64 sys_sync(void);
 
 // An array mapping syscall numbers from syscall.h
@@ -130,8 +134,15 @@ static uint64 (*syscalls[])(void) = {
   [SYS_mkdir]   = sys_mkdir,
   [SYS_close]   = sys_close,
   [SYS_sync]    = sys_sync,
+  [SYS_kstats] = sys_kstats,
+  [SYS_kprocs] = sys_kprocs,
+  [SYS_kevents] = sys_kevents,
+  [SYS_ksyscalls] = sys_ksyscalls,
   // clang-format on
 };
+
+_Static_assert(NELEM(syscalls) == KS_SYSCALLS,
+               "Update KStats syscall ABI limit");
 
 void
 syscall(void)
@@ -143,8 +154,11 @@ syscall(void)
   if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
+    ks_call(p, num);
     p->trapframe->a0 = syscalls[num]();
+    ks_result(p, num, p->trapframe->a0);
   } else {
+    ks_call(p, 0);
     printk("%d %s: unknown sys call %d\n", p->pid, p->name, num);
     p->trapframe->a0 = -1;
   }

@@ -2,6 +2,7 @@ K=kernel
 U=user
 
 OBJS = \
+  $K/kstats.o \
   $K/entry.o \
   $K/start.o \
   $K/console.o \
@@ -131,6 +132,10 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 .PRECIOUS: %.o
 
 UPROGS=\
+	$U/_kstats\
+	$U/_psx\
+	$U/_klog\
+	$U/_kstest\
 	$U/_cat\
 	$U/_echo\
 	$U/_forktest\

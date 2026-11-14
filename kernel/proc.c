@@ -124,6 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  ks_reset(p);
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0) {
@@ -167,6 +168,7 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+  ks_reset(p);
   p->state = UNUSED;
 }
 
@@ -225,6 +227,7 @@ userinit(void)
 
   p->cwd = namei("/");
 
+  ks_event(p, KS_CREATE);
   p->state = RUNNABLE;
 
   release(&p->lock);
@@ -250,6 +253,7 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  ks_size(p, sz, 0);
   return 0;
 }
 
@@ -274,6 +278,7 @@ kfork(void)
     return -1;
   }
   np->sz = p->sz;
+  ks_size(np, np->sz, 1);
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -288,6 +293,7 @@ kfork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+  ks_name(np, np->name);
 
   pid = np->pid;
 
@@ -298,6 +304,7 @@ kfork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+  ks_event(np, KS_CREATE);
   np->state = RUNNABLE;
   release(&np->lock);
 
@@ -356,6 +363,7 @@ kexit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+  ks_event(p, KS_EXIT);
 
   release(&wait_lock);
 
@@ -394,6 +402,7 @@ kwait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+          ks_event(pp, KS_REAP);
           pp->parent = 0;
           freeproc(pp);
           release(&pp->lock);
@@ -450,6 +459,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        ks_dispatch(p, cpuid());
         swtch(&c->context, &p->context);
 
         // Don't re-enable interrupts on release.
@@ -565,6 +575,7 @@ sleep(void)
 
   acquire(&p->lock);
   if (p->chan != 0) {
+    ks_sleep(p);
     p->state = SLEEPING;
     sched();
   }
@@ -587,6 +598,7 @@ wakeup(void *chan)
       // If this waiting process has gotten so far as to actually
       // go to sleep, also set it back to RUNNING.
       if (p->state == SLEEPING) {
+        ks_wake(p);
         p->state = RUNNABLE;
       }
     }
@@ -611,6 +623,7 @@ kkill(int pid)
       p->killed = 1;
       if (p->state == SLEEPING) {
         // Wake process from sleep().
+        ks_wake(p);
         p->state = RUNNABLE;
       }
       release(&p->lock);
@@ -699,5 +712,70 @@ procdump(void)
       state = "???";
     printk("%d %s %s", p->pid, state, p->name);
     printk("\n");
+  }
+}
+
+// Point-in-time per-row snapshots. Parent pointers obey wait_lock ordering;
+// no locks are held across copyout (which may allocate lazy user pages).
+int
+ks_procs(uint64 addr, int capacity)
+{
+  struct proc *self = myproc();
+  int n = 0;
+  for (struct proc *p = proc; p < &proc[NPROC] && n < capacity; p++) {
+    struct kstats_proc out;
+    acquire(&wait_lock);
+    acquire(&p->lock);
+    if (p->state == UNUSED) {
+      release(&p->lock);
+      release(&wait_lock);
+      continue;
+    }
+    ks_read_proc(p, &out);
+    out.ppid = p->parent ? p->parent->pid : 0;
+    release(&p->lock);
+    release(&wait_lock);
+    if (copyout(self->pagetable, self->sz, addr + n * sizeof(out), (char *)&out,
+                sizeof(out)) < 0)
+      return -1;
+    n++;
+  }
+  return n;
+}
+
+int
+ks_calls(int pid, uint64 addr)
+{
+  struct proc *self = myproc();
+  for (struct proc *p = proc; p < &proc[NPROC]; p++) {
+    struct kstats_syscalls out;
+    acquire(&p->lock);
+    if (p->state != UNUSED && p->pid == pid) {
+      ks_read_calls(p, &out);
+      release(&p->lock);
+      return copyout(self->pagetable, self->sz, addr, (char *)&out,
+                     sizeof(out));
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
+void
+ks_top(int *pid, uint64 *dispatches)
+{
+  *pid = 0;
+  *dispatches = 0;
+  for (struct proc *p = proc; p < &proc[NPROC]; p++) {
+    struct kstats_proc out;
+    acquire(&p->lock);
+    if (p->state != UNUSED) {
+      ks_read_proc(p, &out);
+      if (out.dispatches > *dispatches) {
+        *pid = p->pid;
+        *dispatches = out.dispatches;
+      }
+    }
+    release(&p->lock);
   }
 }

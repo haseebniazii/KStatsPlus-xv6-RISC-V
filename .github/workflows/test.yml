@@ -5,9 +5,13 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu qemu-system-riscv clang-format bc
-      - run: make fmt && git diff --exit-code
+      - run: sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu qemu-system-riscv python3-pip bc
+      - run: python3 -m pip install --target /tmp/kstats-format clang-format==22.1.8
+      - run: PYTHONPATH=/tmp/kstats-format PATH=/tmp/kstats-format/bin:$PATH make fmt && git diff --exit-code
       - run: make kernel/kernel fs.img
+      - run: python3 tests/test-kstats.py --cpus 1 --log /tmp/features-1hart.log
+      - run: python3 tests/test-kstats.py --cpus 3 --log /tmp/features-3hart.log
+      - run: python3 tests/test-kstats.py --cpus 8 --log /tmp/features-8hart.log
       - run: ./test-xv6.py usertests
       - run: ./test-xv6.py crash
 

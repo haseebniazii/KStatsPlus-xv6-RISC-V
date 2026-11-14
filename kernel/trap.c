@@ -68,10 +68,17 @@ usertrap(void)
     syscall();
   } else if ((which_dev = devintr()) != 0) {
     // ok
-  } else if ((r_scause() == 15 || r_scause() == 13) &&
-             vmfault(p->pagetable, p->sz, r_stval(),
-                     (r_scause() == 13) ? 1 : 0) != 0) {
-    // page fault on lazily-allocated page
+  } else if (r_scause() == 15 || r_scause() == 13) {
+    int load = r_scause() == 13;
+    uint64 addr = r_stval();
+    int resolved = vmfault(p->pagetable, p->sz, addr, load) != 0;
+    ks_fault(p, load, addr, resolved);
+    if (!resolved) {
+      printk("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(),
+             p->pid);
+      printk("            sepc=0x%lx stval=0x%lx\n", r_sepc(), addr);
+      setkilled(p);
+    }
   } else {
     printk("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printk("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
@@ -166,9 +173,11 @@ kerneltrap()
 void
 clockintr()
 {
+  ks_timer(myproc(), cpuid());
   if (cpuid() == 0) {
     acquire(&tickslock);
     ticks++;
+    ks_clock(ticks);
     wakeup(&ticks);
     release(&tickslock);
   }

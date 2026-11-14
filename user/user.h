@@ -48,3 +48,12 @@ void printf(const char *, ...) __attribute__((format(printf, 1, 2)));
 // umalloc.c
 void *malloc(uint);
 void free(void *);
+
+struct kstats_global;
+struct kstats_proc;
+struct kstats_event;
+struct kstats_syscalls;
+int kstats(struct kstats_global *);
+int kprocs(struct kstats_proc *, int);
+int kevents(struct kstats_event *, int);
+int ksyscalls(int, struct kstats_syscalls *);

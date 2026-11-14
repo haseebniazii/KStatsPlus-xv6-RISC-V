@@ -128,11 +128,13 @@ kexec(char *path, char **argv)
     if (*s == '/')
       last = s + 1;
   safestrcpy(p->name, last, sizeof(p->name));
+  ks_name(p, p->name);
 
   // Commit to the user image.
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
   p->sz = sz;
+  ks_size(p, sz, 0);
   p->trapframe->epc = elf.entry; // initial program counter = ulib.c:start()
   p->trapframe->sp = sp;         // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);

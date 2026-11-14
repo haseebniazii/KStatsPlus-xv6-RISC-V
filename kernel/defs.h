@@ -184,3 +184,27 @@ void            virtio_disk_intr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
+
+// kstats.c: monitoring lock is a leaf; hooks never acquire process/tick locks.
+struct kstats_proc;
+void ks_init(void);
+void ks_boot(int, uint64);
+void ks_boot_end(uint64);
+void ks_reset(struct proc*);
+void ks_name(struct proc*, char*);
+void ks_size(struct proc*, uint64, int);
+void ks_event(struct proc*, int);
+void ks_sleep(struct proc*);
+void ks_wake(struct proc*);
+void ks_timer(struct proc*, int);
+void ks_clock(uint);
+void ks_fault(struct proc*, int, uint64, int);
+void ks_dispatch(struct proc*, int);
+void ks_call(struct proc*, int);
+void ks_result(struct proc*, int, uint64);
+void ks_read_proc(struct proc*, struct kstats_proc*);
+int ks_procs(uint64, int);
+int ks_calls(int, uint64);
+void ks_top(int*, uint64*);
+struct kstats_syscalls;
+void ks_read_calls(struct proc*, struct kstats_syscalls*);

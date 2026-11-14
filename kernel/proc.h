@@ -1,3 +1,5 @@
+#include "kstats.h"
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -101,4 +103,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // Protected by the monitoring lock (a leaf lock), including for snapshots.
+  struct kstats_proc mon;
+  struct kstats_syscalls calls;
+  uint64 sleep_start;
 };

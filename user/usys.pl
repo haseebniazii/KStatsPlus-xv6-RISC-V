@@ -43,3 +43,7 @@ entry("sbrk");
 entry("pause");
 entry("uptime");
 entry("sync");
+entry("kstats");
+entry("kprocs");
+entry("kevents");
+entry("ksyscalls");

@@ -60,6 +60,7 @@ sys_sbrk(void)
     if (addr + n > TRAPFRAME)
       return -1;
     myproc()->sz += n;
+    ks_size(myproc(), myproc()->sz, 0);
   }
   return addr;
 }
