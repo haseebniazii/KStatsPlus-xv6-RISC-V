@@ -1,0 +1,10 @@
+PASS: 1 HARTs, shell commands, 88 kstest checks
+PASS: 1 HARTs reboot resets lifetime counters and remeasures boot
+PASS: 3 HARTs, shell commands, 90 kstest checks
+PASS: 3 HARTs reboot resets lifetime counters and remeasures boot
+PASS: 8 HARTs, shell commands, 95 kstest checks
+PASS: 8 HARTs reboot resets lifetime counters and remeasures boot
+PASS: 75 enabled upstream usertests; ALL TESTS PASSED; exit 0
+usertests duration: 199.3s; log: docs/evidence/usertests.log
+PASS: 3 upstream crash-recovery checks; exit 0
+crash duration: 15.4s; log: docs/evidence/crash.log

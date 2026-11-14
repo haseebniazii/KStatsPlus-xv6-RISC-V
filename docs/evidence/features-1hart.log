@@ -1,0 +1,252 @@
+qemu-system-riscv64 -machine virt -bios none -kernel kernel/kernel -m 128M -smp 1 -nographic -global virtio-mmio.force-legacy=false -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+
+xv6 kernel is booting
+
+init: starting sh
+$ kstats
+KStats+ - Kernel Monitoring Summary
+Boot window: 2393751 time-counter units
+Uptime: 1 ticks
+Processes created=3 exited=0 reaped=0
+Sleep transitions=55 wakeups=53
+User faults=0 resolved=0 failed=0
+Timer interrupts=1
+Scheduler dispatches=56
+Most-dispatched active PID=1 dispatches=35
+Valid syscalls=41 unknown=0 failures=1
+$ kstats boot
+BOOT PROFILER - raw RISC-V time-counter units
+Allocator: 2328939 (97%)
+Virtual memory: 39563 (1%)
+Process table: 709 (0%)
+Traps: 485 (0%)
+Interrupt controller: 893 (0%)
+Buffer cache: 763 (0%)
+Inode table: 374 (0%)
+File table: 166 (0%)
+VirtIO device: 7913 (0%)
+Slowest stage: Allocator
+Measured stages: 2379805
+Boot window: 2393751
+Shares use measured stage sum; later fsinit is outside these stages.
+$ kstats faults
+User load/store faults: 0 loads=0 stores=0 resolved=0 failed=0
+$ kstats cpu
+Uptime: 2 ticks; timer interrupts: 2
+HART 0: 2 interrupts
+Per-HART interrupt sum is distinct from global uptime.
+$ psx
+PID PPID NAME STATE CPU-TICKS CPU% VIRT-KB PEAK-KB DISPATCHES HART
+1 0 init SLEEPING 0 0 16 16 35 0
+  sleeps=35 wakes=34 sleeping-ticks=1 grows=1 shrinks=0
+  faults load=0 store=0 resolved=0 failed=0 last=0x0000000000000000
+  syscalls=25 unknown=0 failures=1
+2 1 sh SLEEPING 0 0 20 20 21 0
+  sleeps=21 wakes=20 sleeping-ticks=1 grows=1 shrinks=0
+  faults load=0 store=0 resolved=0 failed=0 last=0x0000000000000000
+  syscalls=66 unknown=0 failures=0
+7 2 psx RUNNING 0 0 28 84 7 0
+  sleeps=6 wakes=6 sleeping-ticks=0 grows=1 shrinks=1
+  faults load=0 store=0 resolved=0 failed=0 last=0x0000000000000000
+  syscalls=3 unknown=0 failures=0
+State summary (displayed processes): USED=0 SLEEPING=2 RUNNABLE=0 RUNNING=1 ZOMBIE=0
+CPU% is lifetime timer sampling; memory is virtual size, not resident RAM.
+$ psx -p 1
+PID PPID NAME STATE CPU-TICKS CPU% VIRT-KB PEAK-KB DISPATCHES HART
+1 0 init SLEEPING 0 0 16 16 35 0
+  sleeps=35 wakes=34 sleeping-ticks=2 grows=1 shrinks=0
+  faults load=0 store=0 resolved=0 failed=0 last=0x0000000000000000
+  syscalls=25 unknown=0 failures=1
+State summary (displayed processes): USED=0 SLEEPING=1 RUNNABLE=0 RUNNING=0 ZOMBIE=0
+CPU% is lifetime timer sampling; memory is virtual size, not resident RAM.
+$ kstats calls 1
+PID 1 syscall frequencies (failures)
+fork 1 (0)
+wait 1 (0)
+dup 2 (0)
+open 2 (1)
+write 18 (0)
+mknod 1 (0)
+Most-used syscall: write
+$ klog
+SEQ TICK PID EVENT (most recent 64 entries)
+1 0 1 CREATE
+2 1 2 CREATE
+3 1 3 CREATE
+4 1 3 EXIT
+5 1 3 REAP
+6 1 4 CREATE
+7 2 4 EXIT
+8 2 4 REAP
+9 2 5 CREATE
+10 2 5 EXIT
+11 2 5 REAP
+12 2 6 CREATE
+13 2 6 EXIT
+14 2 6 REAP
+15 2 7 CREATE
+16 3 7 EXIT
+17 3 7 REAP
+18 3 8 CREATE
+19 3 8 EXIT
+20 3 8 REAP
+21 4 9 CREATE
+22 4 9 EXIT
+23 4 9 REAP
+24 4 10 CREATE
+$ psx -p abc
+usage: psx [-p PID]
+$ psx -p 2147483647
+PID PPID NAME STATE CPU-TICKS CPU% VIRT-KB PEAK-KB DISPATCHES HART
+psx: PID not found
+$ kstats calls -1
+kstats: PID unavailable or invalid
+$ kstest 1
+ok 1 - snapshot ABI version
+ok 2 - measured boot stage
+ok 3 - measured boot stage
+ok 4 - measured boot stage
+ok 5 - measured boot stage
+ok 6 - measured boot stage
+ok 7 - measured boot stage
+ok 8 - measured boot stage
+ok 9 - measured boot stage
+ok 10 - measured boot stage
+ok 11 - boot stage sum and boot window
+ok 12 - slowest stage and integer measured-stage percentages
+ok 13 - PID PPID name and RUNNING state
+ok 14 - fork workload
+ok 15 - child exit status and reap
+ok 16 - successful create exit reap totals
+ok 17 - PID lifecycle event order
+ok 18 - PID lifecycle event order
+ok 19 - PID lifecycle event order
+ok 20 - complete PID lifecycle history
+ok 21 - per-PID sleep wake counts and sleeping ticks
+ok 22 - global sleep wake counters
+ok 23 - sleeping child pipe
+ok 24 - sleeping child creation
+ok 25 - sleeping child state snapshot
+ok 26 - kill sleeping child
+ok 27 - kill-induced wakeup accounted
+ok 28 - child exit status and reap
+ok 29 - lazy virtual allocation
+ok 30 - lazy load is zero-filled
+ok 31 - per-PID resolved load/store faults
+ok 32 - last resolved fault address
+ok 33 - release lazy virtual memory
+ok 34 - invalid-access child creation
+usertrap(): unexpected scause 0xd pid=17
+            sepc=0x96e stval=0x4000000000
+ok 35 - per-PID failed fault classification
+ok 36 - child exit status and reap
+ok 37 - invalid-access child creation
+usertrap(): unexpected scause 0xf pid=18
+            sepc=0x95e stval=0x4000000000
+ok 38 - per-PID failed fault classification
+ok 39 - child exit status and reap
+ok 40 - global fault totals survive child reaping
+ok 41 - uptime and exact per-HART interrupt sum
+ok 42 - configured HART serviced timer interrupts
+ok 43 - CPU comparison pipe
+ok 44 - CPU comparison child
+ok 45 - CPU comparison pipe
+ok 46 - CPU comparison child
+ok 47 - CPU sample snapshots
+ok 48 - CPU-bound child exceeds sleeping child sampled CPU and utilization
+ok 49 - CPU comparison child completed
+ok 50 - CPU comparison child completed
+ok 51 - zero elapsed CPU utilization guard
+ok 52 - eager and lazy memory growth
+ok 53 - virtual size peak and successful growth counts
+ok 54 - memory shrink
+ok 55 - shrinking preserves lifetime peak
+ok 56 - scheduler dispatches and valid last HART
+ok 57 - global dispatch total and most-dispatched active PID
+ok 58 - syscall frequency snapshot
+ok 59 - controlled syscall failures
+14 kstest: unknown sys call 9999
+ok 60 - unknown syscall preserves original error return
+ok 61 - second syscall frequency snapshot
+ok 62 - exact per-syscall frequencies and error buckets
+ok 63 - most-used syscall selection
+ok 64 - per-PID and global unknown/error totals
+ok 65 - null out-of-range and read-only snapshot pointers
+ok 66 - negative and excessive buffer capacities
+ok 67 - zero-capacity snapshots
+ok 68 - invalid and nonexistent PIDs
+ok 69 - bounded output regions
+ok 70 - one-row snapshot cannot overrun caller buffer
+ok 71 - 40 reused child slots start with independent accounting
+ok 72 - bounded lifecycle ring overwrites oldest records
+ok 73 - event ring sequence and timestamps remain ordered after wrap
+ok 74 - process exhaustion gate
+ok 75 - process table exhaustion returns fork failure
+ok 76 - repeat fork at exhausted capacity
+ok 77 - failed fork does not create lifecycle events or totals
+ok 78 - all exhaustion children released and reaped
+ok 79 - snapshot into lazily allocated user pages
+ok 80 - release lazy snapshot buffer
+ok 81 - concurrent monitor worker started
+ok 82 - concurrent monitor worker started
+ok 83 - concurrent monitor worker started
+ok 84 - concurrent monitor worker started
+ok 85 - concurrent monitor worker completed
+ok 86 - concurrent monitor worker completed
+ok 87 - concurrent monitor worker completed
+ok 88 - concurrent monitor worker completed
+KSTEST: ALL TESTS PASSED (88 checks)
+$ kstats
+KStats+ - Kernel Monitoring Summary
+Boot window: 2393751 time-counter units
+Uptime: 32 ticks
+Processes created=126 exited=123 reaped=123
+Sleep transitions=173 wakeups=171
+User faults=4 resolved=2 failed=2
+Timer interrupts=32
+Scheduler dispatches=313
+Most-dispatched active PID=2 dispatches=38
+Valid syscalls=60751 unknown=1 failures=19
+$ qemu-system-riscv64 -machine virt -bios none -kernel kernel/kernel -m 128M -smp 1 -nographic -global virtio-mmio.force-legacy=false -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+
+xv6 kernel is booting
+
+init: starting sh
+$ kstats
+KStats+ - Kernel Monitoring Summary
+Boot window: 2445088 time-counter units
+Uptime: 1 ticks
+Processes created=3 exited=0 reaped=0
+Sleep transitions=43 wakeups=41
+User faults=0 resolved=0 failed=0
+Timer interrupts=1
+Scheduler dispatches=44
+Most-dispatched active PID=1 dispatches=24
+Valid syscalls=39 unknown=0 failures=0
+$ kstats
+KStats+ - Kernel Monitoring Summary
+Boot window: 2445088 time-counter units
+Uptime: 1 ticks
+Processes created=4 exited=1 reaped=1
+Sleep transitions=45 wakeups=43
+User faults=0 resolved=0 failed=0
+Timer interrupts=1
+Scheduler dispatches=47
+Most-dispatched active PID=1 dispatches=24
+Valid syscalls=374 unknown=0 failures=0
+$ kstats boot
+BOOT PROFILER - raw RISC-V time-counter units
+Allocator: 2375649 (97%)
+Virtual memory: 40555 (1%)
+Process table: 756 (0%)
+Traps: 678 (0%)
+Interrupt controller: 895 (0%)
+Buffer cache: 747 (0%)
+Inode table: 376 (0%)
+File table: 168 (0%)
+VirtIO device: 9164 (0%)
+Slowest stage: Allocator
+Measured stages: 2428988
+Boot window: 2445088
+Shares use measured stage sum; later fsinit is outside these stages.
+$ 

@@ -12,8 +12,8 @@ jobs:
       - run: python3 tests/test-kstats.py --cpus 1 --log /tmp/features-1hart.log
       - run: python3 tests/test-kstats.py --cpus 3 --log /tmp/features-3hart.log
       - run: python3 tests/test-kstats.py --cpus 8 --log /tmp/features-8hart.log
-      - run: ./test-xv6.py usertests
-      - run: ./test-xv6.py crash
+      - run: python3 tests/run-upstream.py usertests --log /tmp/upstream-usertests.log
+      - run: python3 tests/run-upstream.py crash --log /tmp/upstream-crash.log
 
   macos:
     runs-on: macos-latest

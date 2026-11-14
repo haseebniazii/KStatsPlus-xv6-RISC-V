@@ -1,0 +1,5 @@
+riscv64-linux-gnu-gcc (Debian 14.2.0-19) 14.2.0
+QEMU emulator version 10.0.13 (Debian 1:10.0.13+ds-0+deb13u1)
+GNU Make 4.4.1
+Python 3.12.14
+clang-format version 22.1.8
