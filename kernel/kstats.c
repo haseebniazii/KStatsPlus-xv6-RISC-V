@@ -11,8 +11,7 @@
 #error Update the shared KStats ABI limits to match param.h
 #endif
 
-// Lock order: wait_lock -> p->lock -> lock. Never acquire any other lock
-// while holding this lock. In particular, do not call copyout or printk here.
+
 static struct spinlock lock;
 static struct kstats_global g;
 static struct kstats_event events[KS_EVENTS];
